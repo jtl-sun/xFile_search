@@ -3,33 +3,41 @@
 package main
 
 import (
-	"path/filepath"
+	"fmt"
 	"syscall"
 	"unsafe"
 )
 
-var procGetLogicalDrives = kernel32.NewProc("GetLogicalDrives")
+var (
+	kernel32             = syscall.NewLazyDLL("kernel32.dll")
+	procGetLogicalDrives = kernel32.NewProc("GetLogicalDrives")
+	procGetDriveTypeW    = kernel32.NewProc("GetDriveTypeW")
+)
+
+const (
+	driveRemovable = 2
+	driveFixed     = 3
+)
 
 func DetectDefaultRoots() []string {
 	mask, _, _ := procGetLogicalDrives.Call()
-	out := make([]string, 0, 8)
+	roots := make([]string, 0, 4)
 	for i := 0; i < 26; i++ {
 		if mask&(1<<i) == 0 {
 			continue
 		}
-		root := string(rune('A'+i)) + `:\`
+		root := fmt.Sprintf("%c:\\", 'A'+i)
 		p, _ := syscall.UTF16PtrFromString(root)
-		typeID, _, _ := procGetDriveTypeW.Call(uintptr(unsafe.Pointer(p)))
-		// fixed/removable RAM disks only. Exclude CD, network and unknown.
-		if typeID == 2 || typeID == 3 || typeID == 6 {
-			out = append(out, filepath.Clean(root))
+		typ, _, _ := procGetDriveTypeW.Call(uintptr(unsafe.Pointer(p)))
+		// Auto mode indexes only fixed local drives. Removable media can be
+		// added explicitly in xFile_search.ini; auto-scanning a slow USB drive
+		// can otherwise make the whole PC feel stalled during the first index.
+		if typ == driveFixed {
+			roots = append(roots, root)
 		}
 	}
-	return out
-}
-
-func DriveExists(root string) bool {
-	p, _ := syscall.UTF16PtrFromString(root)
-	typeID, _, _ := procGetDriveTypeW.Call(uintptr(unsafe.Pointer(p)))
-	return typeID != 0 && typeID != 1
+	if len(roots) == 0 {
+		roots = []string{"C:\\"}
+	}
+	return roots
 }

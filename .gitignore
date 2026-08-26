@@ -25,3 +25,11 @@ xFile_search.ini
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Local installer payload / release artifacts
+installer/payload/
+release/
+xFile_search_Setup_v*_x64.exe
+xFile_search_Portable_v*_x64.zip
+xFile_search_v*_source.zip
+SHA256SUMS.txt

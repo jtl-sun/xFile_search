@@ -1,47 +1,26 @@
-# Security audit notes
+# xFile_search v0.1.25 Security Audit
 
-## Scope
+This release keeps the security-clean architecture introduced in v0.1.12.
 
-This note documents security-relevant behavior in xFile_search v0.1.25.
+- No PowerShell execution.
+- No `ExecutionPolicy Bypass`.
+- No `rundll32.exe` fallback.
+- No hidden browser process launch for preview.
+- Delete-to-Recycle-Bin continues to use the Windows Shell API.
+- No network access or executable download feature is added.
 
-## Removed / avoided behaviors
+## v0.1.23 Size metadata
 
-The current source does **not** require or intentionally use:
+The new Size column uses ordinary local filesystem metadata (`os.Stat`) in the existing background metadata pass that already obtains modified Date. It does not open file contents, execute files, contact the network, or modify files. Header sorting is in-process only.
 
-- PowerShell child processes
-- `ExecutionPolicy Bypass`
-- `rundll32.exe` preview fallbacks
-- hidden Edge/Chrome headless rendering
-- arbitrary network downloads
-- remote command/control behavior
+## v0.1.25 Search history
 
-These patterns were deliberately avoided after an earlier development build triggered a heuristic antivirus detection.
+- Search history is stored locally as plain text in the app data/portable folder.
+- No network transmission is used.
+- No shell, PowerShell, script engine, or hidden external process is used for history.
+- Writes use a local temporary file followed by rename.
 
-## Windows integration that remains
-
-xFile_search uses normal local Windows APIs for desktop integration, including:
-
-- memory-mapped index files
-- Windows Preview Handlers for supported document previews
-- Shell APIs for opening files and moving supported images to the Recycle Bin
-- Explorer Shell context-menu COM interfaces (`IShellFolder` / `IContextMenu`) on right-click
-- Shell image/thumbnail support for image previews
-- filesystem metadata reads for Size and Date
-
-These operations are local to the machine and do not require network access.
-
-## Runtime files
-
-The application can create local runtime data such as:
-
-- `Index/`
-- `Logs/`
-- `Backup/`
-- `SearchHistory.txt`
-- `xFile_search.ini`
-
-These are excluded from the source repository by `.gitignore`.
-
-## Antivirus note
-
-Development binaries are unsigned. Reputation/heuristic products may therefore treat new binaries more cautiously. Users should scan released binaries before use. If a security product reports a specific detection, investigate the binary and source rather than automatically adding a broad antivirus exclusion.
+## v0.1.25 Shell context menu
+- Uses documented Windows Shell COM interfaces (IShellFolder/IContextMenu/IContextMenu2/IContextMenu3).
+- Does not invoke PowerShell, cmd.exe, rundll32, script hosts, or ExecutionPolicy bypasses.
+- Third-party context-menu extensions already installed/registered in Windows may be loaded by the Shell into the xFile_search process while the menu is open, matching normal Explorer-style behavior. Only install trusted shell extensions.

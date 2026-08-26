@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.26
+- Added a per-user Windows Setup installer that requires no administrator privileges.
+- Setup preserves Index, Logs, Backup, SearchHistory.txt and user configuration during upgrades.
+- Added Desktop and Start Menu shortcuts and Windows Installed Apps uninstall registration.
+- Added INSTALL.md and INSTALL_KO.md.
+- Added automated installer / portable release packaging workflow support.
+
 ## 0.1.25
 
 - Added persistent recent-search history for the main search box.

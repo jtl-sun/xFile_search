@@ -10,17 +10,18 @@ import (
 
 var procCreateMutexW = kernel32.NewProc("CreateMutexW")
 
-const errorAlreadyExists = 183
+const errorAlreadyExists syscall.Errno = 183
 
-func acquireSingleInstance() (release func(), first bool, err error) {
-	name, _ := syscall.UTF16PtrFromString(`Local\xFile_search_single_instance`)
+func acquireSingleInstance() (func(), bool, error) {
+	name := utf16Ptr(`Local\xFile_search_UI_v013`)
 	h, _, e := procCreateMutexW.Call(0, 0, uintptr(unsafe.Pointer(name)))
 	if h == 0 {
 		return func() {}, false, fmt.Errorf("CreateMutexW failed: %v", e)
 	}
-	if e == syscall.Errno(errorAlreadyExists) {
+	if errno, ok := e.(syscall.Errno); ok && errno == errorAlreadyExists {
 		procCloseHandle.Call(h)
 		return func() {}, false, nil
 	}
-	return func() { procCloseHandle.Call(h) }, true, nil
+	release := func() { procCloseHandle.Call(h) }
+	return release, true, nil
 }

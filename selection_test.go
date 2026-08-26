@@ -3,6 +3,23 @@ package main
 import "testing"
 
 func TestNextSelectionAfterDelete(t *testing.T) {
-	tests := []struct{ deleted, remain, want int }{{0,4,0},{2,4,2},{4,4,3},{0,0,-1},{-1,3,0}}
-	for _, tt := range tests { if got:=nextSelectionAfterDelete(tt.deleted,tt.remain);got!=tt.want{t.Fatalf("delete=%d remain=%d got=%d want=%d",tt.deleted,tt.remain,got,tt.want)} }
+	tests := []struct {
+		name  string
+		row   int
+		count int
+		want  int
+	}{
+		{"middle row selects replacement at same index", 5, 10, 5},
+		{"first row selects new first row", 0, 9, 0},
+		{"deleted last row selects previous row", 9, 9, 8},
+		{"single item leaves no selection", 0, 0, -1},
+		{"missing prior selection chooses first row", -1, 4, 0},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := nextSelectionAfterDelete(tc.row, tc.count); got != tc.want {
+				t.Fatalf("nextSelectionAfterDelete(%d,%d)=%d, want %d", tc.row, tc.count, got, tc.want)
+			}
+		})
+	}
 }

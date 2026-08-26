@@ -2,7 +2,14 @@
 
 대량의 파일에서도 빠르게 파일명/경로를 찾을 수 있도록 만든 Windows용 초고속 파일 검색 프로그램입니다. Everything처럼 단순하고 빠르게 사용하는 것을 목표로 하되, Preview와 키보드 중심 작업 기능을 강화하고 있습니다.
 
-현재 버전: **0.1.25**
+현재 버전: **0.1.26**
+
+
+## 설치 (권장)
+
+일반 Windows 사용자는 GitHub **Releases**에서 **`xFile_search_Setup_v0.1.26_x64.exe`** 하나만 다운로드해 실행하면 됩니다. 관리자 권한 없이 사용자 계정에 설치되며, 업데이트할 때 기존 Index와 검색 기록을 보존합니다.
+
+무설치 사용자는 **`xFile_search_Portable_v0.1.26_x64.zip`**을 받아 압축 해제 후 `xFile_search.exe`를 실행하면 됩니다. 자세한 내용은 [INSTALL_KO.md](INSTALL_KO.md)를 참고하세요.
 
 ## 주요 기능
 

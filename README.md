@@ -2,7 +2,7 @@
 
 A fast, lightweight Windows file-name search application focused on large file collections, responsive indexing, keyboard-first navigation, and rich previews.
 
-Current version: **0.1.25**
+Current version: **0.1.26**
 
 > Korean documentation: [README_KO.md](README_KO.md)
 
@@ -19,6 +19,13 @@ Current version: **0.1.25**
 - Recent-search history stored locally
 - Explorer-style Windows Shell context menu on right-click
 - Portable index layout with visible `Index` folder
+
+
+## Install (recommended)
+
+For most Windows users, download **`xFile_search_Setup_v0.1.26_x64.exe`** from GitHub Releases and run it. It installs per-user without administrator privileges and preserves Index/search history during upgrades.
+
+Portable users can download **`xFile_search_Portable_v0.1.26_x64.zip`**. See [INSTALL.md](INSTALL.md) for details.
 
 ## Requirements
 

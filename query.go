@@ -51,6 +51,8 @@ func ParseQuery(raw string) Query {
 	return q
 }
 
+// splitQueryFields is strings.Fields with basic quote support so paths such as
+// "C:\\Old Designs\\*.jpg" remain one search token.
 func splitQueryFields(raw string) []string {
 	var out []string
 	var b strings.Builder
@@ -92,12 +94,22 @@ func isSimpleExtensionGlob(s string) bool {
 	return strings.HasPrefix(s, "*.") && len(s) > 2 && !strings.ContainsAny(s[2:], `*?\/`)
 }
 
+// parsePathScopedToken makes the common Everything-style form intuitive:
+//
+//	C:\\*.jpg            -> scope C:\\ + extension jpg
+//	S:\\Design\\*.png    -> scope S:\\Design\\ + extension png
+//	D:\\ring*.jpg        -> scope D:\\ + filename glob ring*.jpg
+//	S:\\jpg              -> scope S:\\ + contains "jpg"
+//	S:\\                 -> scope S:\\ only
+//
+// The path scope is recursive: C:\\Design\\*.jpg includes subfolders.
 func parsePathScopedToken(q *Query, token string) {
 	token = normalizePathToken(token)
 	if strings.HasSuffix(token, `\`) {
 		q.PathPrefixes = append(q.PathPrefixes, token)
 		return
 	}
+
 	lastSlash := strings.LastIndex(token, `\`)
 	if lastSlash < 0 {
 		q.Terms = append(q.Terms, token)
@@ -119,6 +131,8 @@ func parsePathScopedToken(q *Query, token string) {
 		q.NameGlobs = append(q.NameGlobs, tail)
 		return
 	}
+	// A plain tail after a path is treated as a narrowing term. This makes
+	// S:\\jpg useful without requiring path:S:\\ + jpg syntax.
 	q.Terms = append(q.Terms, tail)
 }
 
@@ -149,6 +163,7 @@ func (q Query) Match(e Entry, mode FilterMode) bool {
 	if q.ForceDir && !e.IsDir {
 		return false
 	}
+
 	for _, prefix := range q.PathPrefixes {
 		if !hasPrefixPathFold(e.Path, prefix) {
 			return false
@@ -174,6 +189,7 @@ func (q Query) Match(e Entry, mode FilterMode) bool {
 			return false
 		}
 	}
+
 	if len(q.Extensions) > 0 {
 		if e.IsDir {
 			return false
@@ -220,6 +236,7 @@ func (s *IndexSnapshot) MatchAt(id uint32, q Query, mode FilterMode) bool {
 		if !hasPrefixBytesFold(path, prefix) {
 			return false
 		}
+	}
 	for _, term := range q.NameTerms {
 		if !containsBytesFold(name, term) {
 			return false
@@ -314,6 +331,8 @@ func hasPrefixPathFold(path, lowerPrefix string) bool {
 	return hasPrefixBytesFold([]byte(path), lowerPrefix)
 }
 
+// wildcardMatchFold supports '*' and '?' on a filename without allocating.
+// ASCII matching is case-insensitive; non-ASCII UTF-8 bytes are exact.
 func wildcardMatchFold(name []byte, pattern string) bool {
 	p := []byte(pattern)
 	i, j := 0, 0
@@ -355,6 +374,9 @@ func equalFoldByte(a, b byte) bool {
 	return a == b
 }
 
+// containsBytesFold is allocation-free and operates directly on the memory-
+// mapped path bytes. ASCII is case-insensitive; non-ASCII UTF-8 bytes are
+// matched exactly, which is suitable for Korean/Japanese filenames.
 func containsBytesFold(hay []byte, lowerNeedle string) bool {
 	if lowerNeedle == "" {
 		return true
@@ -388,6 +410,7 @@ func containsBytesFold(hay []byte, lowerNeedle string) bool {
 	return false
 }
 
+// containsPathFold is the string equivalent used by small in-memory tests.
 func containsPathFold(s, lowerNeedle string) bool {
 	return containsBytesFold([]byte(s), lowerNeedle)
 }

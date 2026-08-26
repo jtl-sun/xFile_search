@@ -1,20 +1,16 @@
-# Test report
+# xFile_search v0.1.25 Test Report
 
-Source snapshot: xFile_search v0.1.25
+Build target: Windows x64 (GOOS=windows, GOARCH=amd64, CGO_ENABLED=0)
 
-The source package was checked before the GitHub-ready bundle was prepared.
-
-## Checks
-
+Checks completed:
 - `go test ./...` — PASS
-- `go test -race ./...` — PASS on the Linux test host for cross-platform logic
+- `go test -race ./...` — PASS
 - `go vet ./...` — PASS
-- Windows amd64 cross-build — PASS
+- Windows x64 GUI build — PASS
+- Windows x64 test binary compile (`go test -c`) — PASS
+- Right-click path selection logic compiles with the ListView notification structures — PASS
+- Native Windows Shell menu path uses IShellFolder/IContextMenu — reviewed
+- IContextMenu2/IContextMenu3 message forwarding — reviewed
+- No PowerShell/cmd/rundll32/script-host invocation was added — reviewed
 
-## Covered pure-logic areas
-
-Automated tests include search/query behavior, mapped-index loading, result selection, keyboard navigation, pane switching, Preview layout, image zoom/pan geometry, Size/Date formatting, result-column sizing, visible-result sorting, search-history management, and window-position calculations.
-
-## Windows runtime note
-
-COM Preview Handlers, Explorer Shell extensions, installed Office/PDF preview components, antivirus products, and per-machine file associations can only be fully validated on the target Windows system. The program therefore still requires practical Windows smoke testing after release builds are produced.
+Note: Windows Shell context-menu extensions are installed components from the user's Windows environment. Their exact menu items and runtime behavior can only be validated on the target Windows PC; the menu intentionally mirrors the registered Explorer shell extensions on that PC.

@@ -2,7 +2,7 @@ package main
 
 import "time"
 
-func formatResultDate(t time.Time) string {
+func formatModifiedDate(t time.Time) string {
 	if t.IsZero() {
 		return ""
 	}

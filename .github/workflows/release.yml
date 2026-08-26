@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'Release v')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.2'
+          cache: true
+
+      - name: Resolve version
+        shell: pwsh
+        run: |
+          $m = Select-String -Path model.go -Pattern 'appVersion\s*=\s*"([^"]+)"'
+          if (-not $m) { throw 'appVersion not found in model.go' }
+          $version = $m.Matches[0].Groups[1].Value
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Test and build application
+        shell: pwsh
+        run: |
+          go test ./...
+          go vet ./...
+          go build -trimpath -ldflags="-H=windowsgui" -o xFile_search.exe .
+          Copy-Item xFile_search.exe xFile_indexer.exe
+
+      - name: Build portable package
+        shell: pwsh
+        run: |
+          $portable = "release/xFile_search_v$env:VERSION"
+          New-Item -ItemType Directory -Force "$portable/Index", "$portable/Logs", "$portable/Backup" | Out-Null
+          Copy-Item xFile_search.exe, xFile_indexer.exe, xFile_search.ini.example, README.md, README_KO.md, INSTALL.md, INSTALL_KO.md $portable
+          Compress-Archive -Path "$portable/*" -DestinationPath "xFile_search_Portable_v$env:VERSION`_x64.zip" -Force
+
+      - name: Build Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force installer/payload | Out-Null
+          Copy-Item xFile_search.exe installer/payload/xFile_search.exe
+          Copy-Item INSTALL_KO.md installer/payload/README_KO.txt
+          Copy-Item INSTALL.md installer/payload/README.txt
+          Push-Location installer
+          go build -trimpath -ldflags="-H=windowsgui" -o "../xFile_search_Setup_v$env:VERSION`_x64.exe" .
+          Pop-Location
+
+      - name: Package source and checksums
+        shell: pwsh
+        run: |
+          git archive --format=zip --output "xFile_search_v$env:VERSION`_source.zip" HEAD
+          $files = @(
+            "xFile_search_Setup_v$env:VERSION`_x64.exe",
+            "xFile_search_Portable_v$env:VERSION`_x64.zip",
+            "xFile_search_v$env:VERSION`_source.zip"
+          )
+          $lines = foreach ($f in $files) {
+            $h = (Get-FileHash -Algorithm SHA256 $f).Hash.ToLower()
+            "$h  $f"
+          }
+          $lines | Set-Content -Encoding ascii SHA256SUMS.txt
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "v$env:VERSION"
+          $assets = @(
+            "xFile_search_Setup_v$env:VERSION`_x64.exe",
+            "xFile_search_Portable_v$env:VERSION`_x64.zip",
+            "xFile_search_v$env:VERSION`_source.zip",
+            "SHA256SUMS.txt"
+          )
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag @assets --clobber
+          } else {
+            gh release create $tag @assets --target "${{ github.sha }}" --title "xFile_search $tag" --notes-file RELEASE_NOTES.md
+          }
