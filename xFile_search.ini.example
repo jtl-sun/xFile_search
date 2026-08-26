@@ -1,0 +1,7 @@
+; xFile_search v0.1.11 example
+; Roots=auto indexes local fixed drives.
+; Or select drives/folders: Roots=C:\;D:\;S:\
+Roots=auto
+MaxDisplayResults=2000
+AutoReindexOnStart=false
+PreviewWidthPercent=44
