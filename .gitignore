@@ -1,0 +1,27 @@
+# Build output
+*.exe
+*.test
+*.out
+/dist/
+/build/
+
+# Runtime data
+/Index/
+/Logs/
+/Backup/
+SearchHistory.txt
+xFile_search.ini
+*.progress
+*.index
+*.log
+
+# Temporary/editor files
+*.tmp
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
