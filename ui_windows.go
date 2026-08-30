@@ -447,6 +447,15 @@ func mainWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 				return result
 			}
 		}
+	case wmActivateApp:
+		// When the user returns from another application, restore the result list
+		// as the keyboard navigation target whenever a result is already selected.
+		// Post the request so Windows can finish its activation/focus transition
+		// first; Up/Down then continues image browsing immediately without a click.
+		if a != nil && wParam != 0 && a.list != 0 && a.selectedRowIndex() >= 0 {
+			postMessage(a.hwnd, wmAppFocusList, 0, 0)
+		}
+		return 0
 	case wmSize:
 		if a != nil {
 			a.layout()
@@ -1801,8 +1810,15 @@ func (a *WindowsApp) handlePreviewInputMessage(m *msg) bool {
 			}
 			return true
 		case wmLButtonUp:
+			wasClick := !a.previewPanMoved
 			a.previewPanning = false
 			procReleaseCapture.Call()
+			if wasClick {
+				// A normal Preview click should make the matching result obvious.
+				// This keeps the same selected row, scrolls it into view, gives it
+				// the focused highlight, and makes Up/Down work immediately.
+				a.focusFileListPane()
+			}
 			return true
 		}
 	}

@@ -117,6 +117,7 @@ const (
 	wmSize             = 0x0005
 	wmClose            = 0x0010
 	wmQuit             = 0x0012
+	wmActivateApp      = 0x001C
 	wmSetFont          = 0x0030
 	wmCommand          = 0x0111
 	wmNotify           = 0x004E

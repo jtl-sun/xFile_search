@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.27
+- Restores the result-list focus when xFile_search is activated again after switching to another application, so Up/Down immediately continues browsing from the current file.
+- A normal click on an image Preview now scrolls the matching result row into view, gives it the focused selection highlight, and makes Up/Down immediately available.
+- Image drag-to-pan and Preview double-click-to-open behavior remain unchanged.
+
 ## 0.1.26
 - Added a per-user Windows Setup installer that requires no administrator privileges.
 - Setup preserves Index, Logs, Backup, SearchHistory.txt and user configuration during upgrades.

@@ -1,12 +1,13 @@
-# xFile_search v0.1.26
+# xFile_search v0.1.27
 
-Recommended download: **xFile_search_Setup_v0.1.26_x64.exe**.
+Recommended download: **xFile_search_Setup_v0.1.27_x64.exe**.
 
-- Added an easy per-user Windows Setup installer; administrator privileges are not required.
-- Upgrades preserve Index, Logs, Backup, SearchHistory.txt, and user configuration.
-- Added Desktop and Start Menu shortcuts plus Windows Installed Apps uninstall registration.
-- Portable ZIP remains available for USB/portable use.
-- Includes the latest search history, Explorer-style right-click context menu, Name/Path/Size/Date columns, sortable headers, and enhanced image preview (cursor-centered zoom, drag pan, 1:1, Fit Window).
-- Existing v3 index files remain compatible; no reindex is required when upgrading from recent versions.
+## What changed
 
-See `INSTALL_KO.md` / `INSTALL.md` for installation instructions and `SHA256SUMS.txt` for integrity verification.
+- When you switch to another application and return to xFile_search, the currently selected result automatically regains list focus. You can press **Up/Down immediately** to continue browsing images without first clicking the list.
+- Clicking an image in the **Preview** pane now reveals the matching row in the left result list, scrolls it into view, and shows the focused selection highlight.
+- After a normal Preview click, **Up/Down** immediately moves to the previous/next result.
+- Image **drag-to-pan**, mouse-wheel cursor-centered zoom, **1:1**, **Fit Window**, and Preview double-click-to-open remain unchanged.
+- Existing Index v3 files remain compatible; **no reindex is required** when upgrading from v0.1.26.
+
+The Setup installer preserves Index, Logs, Backup, SearchHistory.txt, and user configuration during upgrades.

@@ -2,7 +2,7 @@
 
 ## 권장: Windows Setup
 
-1. GitHub **Releases**에서 `xFile_search_Setup_v0.1.26_x64.exe`를 다운로드합니다.
+1. GitHub **Releases**에서 `xFile_search_Setup_v0.1.27_x64.exe`를 다운로드합니다.
 2. Setup 파일을 더블클릭합니다.
 3. 설치 확인 창에서 **Yes**를 누릅니다.
 4. 설치가 끝나면 xFile_search가 자동 실행됩니다.
@@ -15,7 +15,7 @@
 
 ## Portable 버전
 
-`xFile_search_Portable_v0.1.26_x64.zip`을 원하는 폴더에 압축 해제한 뒤 `xFile_search.exe`를 실행합니다.
+`xFile_search_Portable_v0.1.27_x64.zip`을 원하는 폴더에 압축 해제한 뒤 `xFile_search.exe`를 실행합니다.
 
 ## 제거
 

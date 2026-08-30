@@ -2,7 +2,7 @@
 
 ## Recommended: Windows Setup
 
-1. Download `xFile_search_Setup_v0.1.26_x64.exe` from GitHub **Releases**.
+1. Download `xFile_search_Setup_v0.1.27_x64.exe` from GitHub **Releases**.
 2. Double-click the setup file.
 3. Click **Yes** in the install confirmation.
 4. xFile_search launches automatically when installation finishes.
@@ -15,7 +15,7 @@ No administrator privileges are required. Installing over an older version updat
 
 ## Portable
 
-Extract `xFile_search_Portable_v0.1.26_x64.zip` and run `xFile_search.exe`.
+Extract `xFile_search_Portable_v0.1.27_x64.zip` and run `xFile_search.exe`.
 
 ## Uninstall
 
