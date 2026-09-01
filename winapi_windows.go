@@ -55,10 +55,14 @@ var (
 	procAppendMenuW           = user32.NewProc("AppendMenuW")
 	procTrackPopupMenuEx      = user32.NewProc("TrackPopupMenuEx")
 	procDestroyMenu           = user32.NewProc("DestroyMenu")
+	procGetSysColorBrush      = user32.NewProc("GetSysColorBrush")
 
 	procGetStockObject       = gdi32.NewProc("GetStockObject")
 	procDeleteObject         = gdi32.NewProc("DeleteObject")
 	procGetObjectW           = gdi32.NewProc("GetObjectW")
+	procCreateFontW          = gdi32.NewProc("CreateFontW")
+	procSetTextColor         = gdi32.NewProc("SetTextColor")
+	procSetBkMode            = gdi32.NewProc("SetBkMode")
 	procShellExecuteW        = shell32.NewProc("ShellExecuteW")
 	procSHFileOperationW     = shell32.NewProc("SHFileOperationW")
 	procInitCommonControlsEx = comctl32.NewProc("InitCommonControlsEx")
@@ -105,6 +109,7 @@ const (
 	bsAutoCheckBox = 0x00000003
 
 	ssBitmap      = 0x0000000E
+	ssCenter      = 0x00000001
 	ssCenterImage = 0x00000200
 
 	cbsDropDownList = 0x0003
@@ -120,6 +125,7 @@ const (
 	wmActivateApp      = 0x001C
 	wmDeviceChange     = 0x0219
 	wmSetFont          = 0x0030
+	wmCtlColorStatic   = 0x0138
 	wmCommand          = 0x0111
 	wmNotify           = 0x004E
 	wmSetRedraw        = 0x000B
@@ -141,6 +147,7 @@ const (
 	wmAppShellPathGone = wmApp + 8
 	wmAppDriveCheck    = wmApp + 9
 	wmAppIndexingState = wmApp + 10
+	wmAppIndexPercent  = wmApp + 11
 
 	pmRemove = 0x0001
 
@@ -187,6 +194,8 @@ const (
 
 	colorWindow     = 5
 	colorButtonFace = 15
+	indexingGreen   = 0x00008000
+	bkTransparent   = 1
 	idcArrow        = 32512
 	idcSizeWE       = 32644
 

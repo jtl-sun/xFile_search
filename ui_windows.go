@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -32,6 +33,7 @@ const (
 	idBread         = 1200
 	idStatus        = 1201
 	idIndexProgress = 1202
+	idIndexState    = 1203
 	idPreviewHeader = 1300
 	idPreviewHost   = 1301
 	idPreviewText   = 1302
@@ -82,6 +84,9 @@ type WindowsApp struct {
 	bread            uintptr
 	status           uintptr
 	indexProgress    uintptr
+	indexState       uintptr
+	indexStateFont   uintptr
+	indexPercent     int
 	previewHeader    uintptr
 	previewHost      uintptr
 	previewText      uintptr
@@ -297,6 +302,7 @@ func (a *WindowsApp) createControls(hinst uintptr) {
 	a.bread = createControl(0, "STATIC", "", wsChild|wsVisible, idBread, a.hwnd, hinst)
 	a.status = createControl(0, "STATIC", "Ready", wsChild|wsVisible, idStatus, a.hwnd, hinst)
 	a.indexProgress = createControl(0, "msctls_progress32", "", wsChild|pbsMarquee, idIndexProgress, a.hwnd, hinst)
+	a.indexState = createControl(0, "STATIC", "INDEXING... 0%", wsChild|ssCenter, idIndexState, a.hwnd, hinst)
 	a.list = createControl(wsExClientEdge, "SysListView32", "", wsChild|wsVisible|wsTabStop|lvsReport|lvsShowSelAlways, idList, a.hwnd, hinst)
 	a.splitter = createControl(0, "xFileSearchSplitterClass", "", wsChild|wsVisible, idSplitter, a.hwnd, hinst)
 	a.previewHeader = createControl(0, "STATIC", "Preview", wsChild|wsVisible, idPreviewHeader, a.hwnd, hinst)
@@ -312,6 +318,12 @@ func (a *WindowsApp) createControls(hinst uintptr) {
 	controls := []uintptr{a.searchEdit, a.searchHistoryBtn, a.filterBox, a.narrowBtn, a.backBtn, a.clearBtn, a.reindexBtn, a.copyBtn, a.indexDirBtn, a.previewCheck, a.bread, a.status, a.indexProgress, a.list, a.previewHeader, a.previewText, a.previewImage, a.previewOneBtn, a.previewFitBtn}
 	for _, h := range controls {
 		sendMessage(h, wmSetFont, font, 1)
+	}
+	a.indexStateFont = createIndexingBoldFont()
+	if a.indexStateFont != 0 {
+		sendMessage(a.indexState, wmSetFont, a.indexStateFont, 1)
+	} else {
+		sendMessage(a.indexState, wmSetFont, font, 1)
 	}
 
 	for _, s := range []string{"All", "Files", "Folders"} {
@@ -440,17 +452,22 @@ func (a *WindowsApp) layout() {
 		showWindow(a.previewHost, false)
 	}
 	if a.indexing.Load() && a.indexProgress != 0 {
-		const progressW int32 = 220
-		const progressGap int32 = 8
-		statusW := w - margin*2 - progressW - progressGap - 4
+		const labelW int32 = 150
+		const progressW int32 = 190
+		const gap int32 = 8
+		statusW := w - margin*2 - labelW - progressW - gap*2 - 4
 		if statusW < 120 {
 			statusW = 120
 		}
 		setPos(a.status, margin+2, h-statusH, statusW, statusH)
-		setPos(a.indexProgress, w-margin-progressW, h-statusH+4, progressW, statusH-8)
+		labelX := margin + 2 + statusW + gap
+		setPos(a.indexState, labelX, h-statusH+2, labelW, statusH-4)
+		setPos(a.indexProgress, labelX+labelW+gap, h-statusH+4, progressW, statusH-8)
+		showWindow(a.indexState, true)
 		showWindow(a.indexProgress, true)
 	} else {
 		setPos(a.status, margin+2, h-statusH, w-margin*2-4, statusH)
+		showWindow(a.indexState, false)
 		showWindow(a.indexProgress, false)
 	}
 }
@@ -458,6 +475,13 @@ func (a *WindowsApp) layout() {
 func mainWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 	a := winApp
 	switch message {
+	case wmCtlColorStatic:
+		if a != nil && lParam == a.indexState && a.indexState != 0 {
+			procSetTextColor.Call(wParam, indexingGreen)
+			procSetBkMode.Call(wParam, bkTransparent)
+			brush, _, _ := procGetSysColorBrush.Call(colorWindow)
+			return brush
+		}
 	case wmInitMenuPopup, wmDrawItem, wmMeasureItem, wmMenuChar:
 		if a != nil {
 			if result, handled := a.forwardShellContextMenuMessage(message, wParam, lParam); handled {
@@ -647,12 +671,21 @@ func mainWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 			a.applyIndexingVisual(wParam != 0)
 		}
 		return 0
+	case wmAppIndexPercent:
+		if a != nil {
+			a.updateIndexPercent(int(wParam))
+		}
+		return 0
 	case wmClose:
 		if a != nil {
 			_ = SavePreviewWidthPercent(a.configPath, a.previewPercent)
 			a.stopIndexer()
 			if a.previewMgr != nil {
 				a.previewMgr.Close()
+			}
+			if a.indexStateFont != 0 {
+				procDeleteObject.Call(a.indexStateFont)
+				a.indexStateFont = 0
 			}
 		}
 		procDestroyWindow.Call(hwnd)
@@ -2201,9 +2234,20 @@ func (a *WindowsApp) startReindex(manual bool) {
 	partialPath := filepath.Join(IndexFolderPath(), fmt.Sprintf("xFile_v3.partial.%d.index", time.Now().UnixNano()))
 	cleanupStalePartialIndexes(IndexFolderPath())
 
+	expectedTotal := 0
+	if snap := a.snapshot.Load(); snap != nil {
+		expectedTotal = snap.Len()
+	}
+	if expectedTotal <= 0 {
+		expectedTotal = readIndexCountHint(a.indexPath)
+	}
+
 	_ = os.Remove(IndexerProgressPath())
 	cmd := exec.Command(workerExe, "--indexer")
 	cmd.Env = append(os.Environ(), "XFILE_PARTIAL_INDEX="+partialPath)
+	if expectedTotal > 0 {
+		cmd.Env = append(cmd.Env, "XFILE_EXPECTED_TOTAL="+strconv.Itoa(expectedTotal))
+	}
 	if len(preferredVolumes) > 0 {
 		cmd.Env = append(cmd.Env, "XFILE_PRIORITY_VOLUMES="+strings.Join(preferredVolumes, ";"))
 	}
@@ -2216,6 +2260,7 @@ func (a *WindowsApp) startReindex(manual bool) {
 	a.workerMu.Lock()
 	a.workerCmd = cmd
 	a.workerMu.Unlock()
+	postMessage(a.hwnd, wmAppIndexPercent, 0, 0)
 	postMessage(a.hwnd, wmAppIndexingState, 1, 0)
 	if manual {
 		a.postStatus("Reindex started in a separate background process...")
@@ -2232,6 +2277,9 @@ func (a *WindowsApp) startReindex(manual bool) {
 		}
 		a.workerMu.Unlock()
 		a.indexing.Store(false)
+		if err == nil {
+			postMessage(a.hwnd, wmAppIndexPercent, 100, 0)
+		}
 		postMessage(a.hwnd, wmAppIndexingState, 0, 0)
 		if err != nil {
 			logf("indexer exited: %v", err)
@@ -2273,6 +2321,9 @@ func (a *WindowsApp) watchIndexer(cmd *exec.Cmd, partialPath string) {
 			msg := strings.TrimSpace(string(b))
 			if msg != "" && msg != last {
 				last = msg
+				if percent, ok := parseIndexPercent(msg); ok {
+					postMessage(a.hwnd, wmAppIndexPercent, uintptr(percent), 0)
+				}
 				a.postStatus(msg)
 			}
 		}
@@ -2388,11 +2439,14 @@ func (a *WindowsApp) applyIndexingVisual(active bool) {
 		return
 	}
 	if active {
-		setWindowText(a.hwnd, appName+" "+appVersion+"  ·  INDEXING...")
+		label := indexProgressText(a.indexPercent)
+		setWindowText(a.hwnd, appName+" "+appVersion+"  ·  "+label)
 		setWindowText(a.reindexBtn, "Indexing...")
+		setWindowText(a.indexState, label)
 		if a.indexProgress != 0 {
 			sendMessage(a.indexProgress, pbmSetMarquee, 1, 28)
 		}
+		invalidateWindow(a.indexState)
 	} else {
 		setWindowText(a.hwnd, appName+" "+appVersion)
 		setWindowText(a.reindexBtn, "Reindex")
@@ -2401,6 +2455,39 @@ func (a *WindowsApp) applyIndexingVisual(active bool) {
 		}
 	}
 	a.layout()
+}
+
+func (a *WindowsApp) updateIndexPercent(percent int) {
+	if a == nil {
+		return
+	}
+	if percent < 0 {
+		percent = 0
+	}
+	if percent > 100 {
+		percent = 100
+	}
+	a.indexPercent = percent
+	label := indexProgressText(percent)
+	setWindowText(a.indexState, label)
+	if a.indexing.Load() {
+		setWindowText(a.hwnd, appName+" "+appVersion+"  ·  "+label)
+	}
+	invalidateWindow(a.indexState)
+}
+
+func createIndexingBoldFont() uintptr {
+	face := utf16Ptr("Segoe UI")
+	h, _, _ := procCreateFontW.Call(
+		uintptr(uint32(0xfffffff1)), // -15 logical pixels
+		0, 0, 0,
+		700, // FW_BOLD
+		0, 0, 0,
+		1, // DEFAULT_CHARSET
+		0, 0, 0, 0,
+		uintptr(unsafe.Pointer(face)),
+	)
+	return h
 }
 
 func formatCount(n int) string {

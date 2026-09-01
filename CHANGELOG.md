@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.29
+- Added a dedicated **bold green `INDEXING... xx%` status label** at the bottom of the main window so background indexing is visually unmistakable.
+- The current indexing percentage is also mirrored in the window title.
+- The percentage uses the previous completed index item count as a lightweight estimate, avoiding a full pre-count pass that would make indexing slower.
+- Progress is capped at 99% until the worker finishes, then changes to 100%.
+- Existing marquee progress, current scan path, running item count, skipped count, partial searchable index, and background indexing behavior remain unchanged.
+- Added unit tests for percentage estimation/parsing and index-count hint loading.
+
+
 ## 0.1.28
 - Detects replacement of fixed/removable volumes even when the same Windows drive letter is reused (for example F:) by comparing a persisted Windows volume fingerprint.
 - Monitors Windows drive arrival/removal/change events and automatically starts a safe background refresh when the indexed volume set changes.

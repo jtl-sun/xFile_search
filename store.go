@@ -85,6 +85,29 @@ func SaveIndex(path string, snap *IndexSnapshot) error {
 	return nil
 }
 
+func readIndexCountHint(path string) int {
+	f, err := os.Open(path)
+	if err != nil {
+		return 0
+	}
+	defer f.Close()
+	var header [20]byte
+	if _, err := io.ReadFull(f, header[:]); err != nil {
+		return 0
+	}
+	if string(header[:len(indexMagic)]) != indexMagic {
+		return 0
+	}
+	if binary.LittleEndian.Uint32(header[8:12]) != indexVersion {
+		return 0
+	}
+	count := binary.LittleEndian.Uint64(header[12:20])
+	if count > uint64(^uint(0)>>1) {
+		return 0
+	}
+	return int(count)
+}
+
 func LoadIndex(path string, progress func(done, total uint64)) (*IndexSnapshot, error) {
 	// v0.1.3 maps the index instead of reconstructing millions of Go objects.
 	// This call therefore has near-constant startup cost and tiny heap impact.
