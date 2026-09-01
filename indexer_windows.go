@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -40,10 +41,11 @@ func runIndexerChild() int {
 	roots := indexerRoots(cfg)
 	driveFingerprint := currentDriveStateText(roots)
 	partialPath := strings.TrimSpace(os.Getenv("XFILE_PARTIAL_INDEX"))
+	expectedTotal, _ := strconv.Atoi(strings.TrimSpace(os.Getenv("XFILE_EXPECTED_TOTAL")))
 	progressPath := IndexerProgressPath()
 	_ = os.MkdirAll(filepath.Dir(progressPath), 0o755)
 	_ = os.Remove(progressPath)
-	writeIndexerProgress(progressPath, "INDEXING · starting background index...")
+	writeIndexerProgress(progressPath, indexProgressText(0)+" · starting background index...")
 	logf("worker reindex start roots=%v", roots)
 
 	count, err := BuildIndexFileProgressive(context.Background(), roots, indexPath, partialPath, 5000, func(p ScanProgress) {
@@ -52,7 +54,8 @@ func runIndexerChild() int {
 			root = roots[0]
 		}
 		current := compactProgressPath(p.Current, 72)
-		msg := fmt.Sprintf("INDEXING · %s · %s items · %d skipped", root, formatCount(p.Count), p.Errors)
+		percent := estimateIndexPercent(p.Count, expectedTotal)
+		msg := fmt.Sprintf("%s · %s · %s items · %d skipped", indexProgressText(percent), root, formatCount(p.Count), p.Errors)
 		if current != "" {
 			msg += " · " + current
 		}
@@ -67,7 +70,7 @@ func runIndexerChild() int {
 		logf("drive-state fingerprint save failed: %v", err)
 	}
 	logf("worker reindex complete count=%d", count)
-	writeIndexerProgress(progressPath, fmt.Sprintf("DONE · %s items indexed", formatCount(count)))
+	writeIndexerProgress(progressPath, fmt.Sprintf("INDEXING... 100%% · DONE · %s items indexed", formatCount(count)))
 	// Give the UI enough time to observe the final status before it removes it.
 	time.Sleep(150 * time.Millisecond)
 	return 0

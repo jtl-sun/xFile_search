@@ -2,7 +2,7 @@
 
 A fast, lightweight Windows file-name search application focused on large file collections, responsive indexing, keyboard-first navigation, and rich previews.
 
-Current version: **0.1.28**
+Current version: **0.1.29**
 
 > Korean documentation: [README_KO.md](README_KO.md)
 
@@ -11,7 +11,7 @@ Current version: **0.1.28**
 - Fast indexed file-name/path search for large local file collections
 - Automatically detects accessible fixed/removable local drives and recognizes when a different volume is connected under the same drive letter (for example `F:`)
 - Progressive background indexing: an early partial index becomes searchable while the full index continues building
-- Visible indexing state in the window title, Reindex button, bottom marquee indicator, current scan path, running item count, and skipped count
+- Visible indexing state with a **bold green `INDEXING... xx%` label**, window title percentage, Reindex button state, bottom marquee indicator, current scan path, running item count, and skipped count
 - Search syntax such as `*.jpg`, `D:\\*.jpg`, and folder-scoped patterns
 - Search-within-results workflow
 - Background metadata loading so the result list remains responsive
@@ -26,9 +26,9 @@ Current version: **0.1.28**
 
 ## Install (recommended)
 
-For most Windows users, download **`xFile_search_Setup_v0.1.28_x64.exe`** from GitHub Releases and run it. It installs per-user without administrator privileges and preserves Index/search history during upgrades.
+For most Windows users, download **`xFile_search_Setup_v0.1.29_x64.exe`** from GitHub Releases and run it. It installs per-user without administrator privileges and preserves Index/search history during upgrades.
 
-Portable users can download **`xFile_search_Portable_v0.1.28_x64.zip`**. See [INSTALL.md](INSTALL.md) for details.
+Portable users can download **`xFile_search_Portable_v0.1.29_x64.zip`**. See [INSTALL.md](INSTALL.md) for details.
 
 ## Requirements
 
