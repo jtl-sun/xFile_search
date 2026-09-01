@@ -79,7 +79,7 @@ func EnsureConfig(path string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	content := `# xFile_search v0.1.11 configuration
+	content := `# xFile_search v0.1.28 configuration
 # Portable mode: index/config/log files are kept beside xFile_search.exe when writable.
 # Roots=auto indexes local fixed drives. You can also use: Roots=C:\;D:\;S:\
 Roots=auto
@@ -229,4 +229,8 @@ func formatConfigRoots(cfg Config) string {
 
 func IndexerProgressPath() string {
 	return filepath.Join(IndexFolderPath(), "xFile_v3.index.progress")
+}
+
+func DriveStatePath() string {
+	return filepath.Join(IndexFolderPath(), "xFile_v3.drives")
 }

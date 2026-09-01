@@ -31,6 +31,7 @@ const (
 	idList          = 1100
 	idBread         = 1200
 	idStatus        = 1201
+	idIndexProgress = 1202
 	idPreviewHeader = 1300
 	idPreviewHost   = 1301
 	idPreviewText   = 1302
@@ -80,6 +81,7 @@ type WindowsApp struct {
 	list             uintptr
 	bread            uintptr
 	status           uintptr
+	indexProgress    uintptr
 	previewHeader    uintptr
 	previewHost      uintptr
 	previewText      uintptr
@@ -129,6 +131,7 @@ type WindowsApp struct {
 	searchHistoryPath string
 	historyMu         sync.Mutex
 	historySeq        atomic.Uint64
+	driveChangeSeq    atomic.Uint64
 
 	pendingListNav      int
 	pendingListNavQuery string
@@ -203,7 +206,7 @@ func (a *WindowsApp) Run() error {
 	defer runtime.UnlockOSThread()
 
 	winApp = a
-	icc := initCommonControlsEx{DwSize: uint32(unsafe.Sizeof(initCommonControlsEx{})), DwICC: iccListViewClasses}
+	icc := initCommonControlsEx{DwSize: uint32(unsafe.Sizeof(initCommonControlsEx{})), DwICC: iccListViewClasses | iccProgressClass}
 	procInitCommonControlsEx.Call(uintptr(unsafe.Pointer(&icc)))
 
 	className := utf16Ptr("xFileSearchWindowClass")
@@ -293,6 +296,7 @@ func (a *WindowsApp) createControls(hinst uintptr) {
 	a.previewCheck = createControl(0, "BUTTON", "Preview", wsChild|wsVisible|wsTabStop|bsAutoCheckBox, idPreview, a.hwnd, hinst)
 	a.bread = createControl(0, "STATIC", "", wsChild|wsVisible, idBread, a.hwnd, hinst)
 	a.status = createControl(0, "STATIC", "Ready", wsChild|wsVisible, idStatus, a.hwnd, hinst)
+	a.indexProgress = createControl(0, "msctls_progress32", "", wsChild|pbsMarquee, idIndexProgress, a.hwnd, hinst)
 	a.list = createControl(wsExClientEdge, "SysListView32", "", wsChild|wsVisible|wsTabStop|lvsReport|lvsShowSelAlways, idList, a.hwnd, hinst)
 	a.splitter = createControl(0, "xFileSearchSplitterClass", "", wsChild|wsVisible, idSplitter, a.hwnd, hinst)
 	a.previewHeader = createControl(0, "STATIC", "Preview", wsChild|wsVisible, idPreviewHeader, a.hwnd, hinst)
@@ -305,7 +309,7 @@ func (a *WindowsApp) createControls(hinst uintptr) {
 	sendMessage(a.previewCheck, bmSetCheck, bstChecked, 0)
 
 	font, _, _ := procGetStockObject.Call(defaultGuiFont)
-	controls := []uintptr{a.searchEdit, a.searchHistoryBtn, a.filterBox, a.narrowBtn, a.backBtn, a.clearBtn, a.reindexBtn, a.copyBtn, a.indexDirBtn, a.previewCheck, a.bread, a.status, a.list, a.previewHeader, a.previewText, a.previewImage, a.previewOneBtn, a.previewFitBtn}
+	controls := []uintptr{a.searchEdit, a.searchHistoryBtn, a.filterBox, a.narrowBtn, a.backBtn, a.clearBtn, a.reindexBtn, a.copyBtn, a.indexDirBtn, a.previewCheck, a.bread, a.status, a.indexProgress, a.list, a.previewHeader, a.previewText, a.previewImage, a.previewOneBtn, a.previewFitBtn}
 	for _, h := range controls {
 		sendMessage(h, wmSetFont, font, 1)
 	}
@@ -435,7 +439,20 @@ func (a *WindowsApp) layout() {
 		showWindow(a.previewFitBtn, false)
 		showWindow(a.previewHost, false)
 	}
-	setPos(a.status, margin+2, h-statusH, w-margin*2-4, statusH)
+	if a.indexing.Load() && a.indexProgress != 0 {
+		const progressW int32 = 220
+		const progressGap int32 = 8
+		statusW := w - margin*2 - progressW - progressGap - 4
+		if statusW < 120 {
+			statusW = 120
+		}
+		setPos(a.status, margin+2, h-statusH, statusW, statusH)
+		setPos(a.indexProgress, w-margin-progressW, h-statusH+4, progressW, statusH-8)
+		showWindow(a.indexProgress, true)
+	} else {
+		setPos(a.status, margin+2, h-statusH, w-margin*2-4, statusH)
+		showWindow(a.indexProgress, false)
+	}
 }
 
 func mainWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
@@ -446,6 +463,11 @@ func mainWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 			if result, handled := a.forwardShellContextMenuMessage(message, wParam, lParam); handled {
 				return result
 			}
+		}
+	case wmDeviceChange:
+		if a != nil && (wParam == dbtDeviceArrival || wParam == dbtDeviceRemoveComplete || wParam == dbtDevNodesChanged) {
+			a.scheduleDriveRefreshCheck()
+			return 1
 		}
 	case wmActivateApp:
 		// When the user returns from another application, restore the result list
@@ -613,6 +635,16 @@ func mainWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 	case wmAppShellPathGone:
 		if a != nil {
 			a.consumeShellGonePath()
+		}
+		return 0
+	case wmAppDriveCheck:
+		if a != nil {
+			a.handleDriveRefreshCheck()
+		}
+		return 0
+	case wmAppIndexingState:
+		if a != nil {
+			a.applyIndexingVisual(wParam != 0)
 		}
 		return 0
 	case wmClose:
@@ -1104,8 +1136,12 @@ func (a *WindowsApp) consumeResult() {
 	if shown > a.cfg.MaxDisplayResults {
 		shown = a.cfg.MaxDisplayResults
 	}
-	a.setStatus(fmt.Sprintf("%s matches · %s shown · %.1f ms · %s indexed",
-		formatCount(len(p.Result.IDs)), formatCount(shown), float64(p.Result.Elapsed.Microseconds())/1000.0, formatCount(p.Snap.Len())))
+	status := fmt.Sprintf("%s matches · %s shown · %.1f ms · %s indexed",
+		formatCount(len(p.Result.IDs)), formatCount(shown), float64(p.Result.Elapsed.Microseconds())/1000.0, formatCount(p.Snap.Len()))
+	if a.indexing.Load() {
+		status += " · INDEXING continues in background"
+	}
+	a.setStatus(status)
 	a.scheduleRememberSearch(p.Result.Query)
 
 	// If Up/Down was pressed in the search box before this search finished,
@@ -2042,9 +2078,9 @@ func (a *WindowsApp) startBackgroundLoad() {
 	a.startReindex(false)
 }
 
-func (a *WindowsApp) loadIndexAsync(path, reason string, rebuildOnError bool) {
+func (a *WindowsApp) loadIndexAsync(path, reason string, rebuildOnError bool) bool {
 	if !a.loading.CompareAndSwap(false, true) {
-		return
+		return false
 	}
 	go func() {
 		defer a.loading.Store(false)
@@ -2066,6 +2102,7 @@ func (a *WindowsApp) loadIndexAsync(path, reason string, rebuildOnError bool) {
 		}
 		a.postSnapshot(snap, reason)
 	}()
+	return true
 }
 
 func (a *WindowsApp) migrateLegacyIndex(source string) {
@@ -2158,7 +2195,18 @@ func (a *WindowsApp) startReindex(manual bool) {
 	if _, err := os.Stat(workerExe); err != nil {
 		workerExe = exe // portable fallback
 	}
+
+	roots := a.roots()
+	preferredVolumes := changedDriveVolumes(DriveStatePath(), roots)
+	partialPath := filepath.Join(IndexFolderPath(), fmt.Sprintf("xFile_v3.partial.%d.index", time.Now().UnixNano()))
+	cleanupStalePartialIndexes(IndexFolderPath())
+
+	_ = os.Remove(IndexerProgressPath())
 	cmd := exec.Command(workerExe, "--indexer")
+	cmd.Env = append(os.Environ(), "XFILE_PARTIAL_INDEX="+partialPath)
+	if len(preferredVolumes) > 0 {
+		cmd.Env = append(cmd.Env, "XFILE_PRIORITY_VOLUMES="+strings.Join(preferredVolumes, ";"))
+	}
 	if err := cmd.Start(); err != nil {
 		a.indexing.Store(false)
 		logf("indexer start failed: %v", err)
@@ -2168,13 +2216,14 @@ func (a *WindowsApp) startReindex(manual bool) {
 	a.workerMu.Lock()
 	a.workerCmd = cmd
 	a.workerMu.Unlock()
+	postMessage(a.hwnd, wmAppIndexingState, 1, 0)
 	if manual {
 		a.postStatus("Reindex started in a separate background process...")
 	} else {
 		a.postStatus("Building first index in a separate background process...")
 	}
 
-	go a.watchIndexer(cmd)
+	go a.watchIndexer(cmd, partialPath)
 	go func() {
 		err := cmd.Wait()
 		a.workerMu.Lock()
@@ -2183,19 +2232,26 @@ func (a *WindowsApp) startReindex(manual bool) {
 		}
 		a.workerMu.Unlock()
 		a.indexing.Store(false)
+		postMessage(a.hwnd, wmAppIndexingState, 0, 0)
 		if err != nil {
 			logf("indexer exited: %v", err)
 			a.postStatus("Background indexing stopped. Click Reindex to try again.")
 			return
 		}
-		a.postStatus("Index built. Loading it in background...")
-		a.loadIndexAsync(a.indexPath, "background index mapped", false)
+		a.postStatus("Index built. Loading full index in background...")
+		for {
+			if a.loadIndexAsync(a.indexPath, "background index mapped", false) {
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
 	}()
 }
 
-func (a *WindowsApp) watchIndexer(cmd *exec.Cmd) {
+func (a *WindowsApp) watchIndexer(cmd *exec.Cmd, partialPath string) {
 	progressPath := IndexerProgressPath()
 	last := ""
+	partialLoaded := false
 	t := time.NewTicker(600 * time.Millisecond)
 	defer t.Stop()
 	for range t.C {
@@ -2205,14 +2261,20 @@ func (a *WindowsApp) watchIndexer(cmd *exec.Cmd) {
 		if !active {
 			return
 		}
-		b, err := os.ReadFile(progressPath)
-		if err != nil {
-			continue
+		if !partialLoaded && partialPath != "" && !a.loading.Load() {
+			if _, err := os.Stat(partialPath); err == nil {
+				if a.loadIndexAsync(partialPath, "partial index · background indexing continues", false) {
+					partialLoaded = true
+				}
+			}
 		}
-		msg := strings.TrimSpace(string(b))
-		if msg != "" && msg != last {
-			last = msg
-			a.postStatus(msg)
+		b, err := os.ReadFile(progressPath)
+		if err == nil {
+			msg := strings.TrimSpace(string(b))
+			if msg != "" && msg != last {
+				last = msg
+				a.postStatus(msg)
+			}
 		}
 	}
 }
@@ -2255,10 +2317,90 @@ func (a *WindowsApp) consumeSnapshot() {
 		a.setStatus(fmt.Sprintf("New index ready · %s items · current Search Within session keeps the previous snapshot until Clear", formatCount(p.Snap.Len())))
 		return
 	}
+	if strings.Contains(strings.ToLower(p.Reason), "partial index") && a.indexing.Load() {
+		a.setStatus(fmt.Sprintf("Partial index ready · %s items searchable · full indexing continues in background...", formatCount(p.Snap.Len())))
+		if strings.TrimSpace(getWindowText(a.searchEdit)) != "" {
+			a.scheduleSearch()
+		}
+		return
+	}
 	a.setStatus(fmt.Sprintf("Ready · %s items indexed · %s", formatCount(p.Snap.Len()), p.Reason))
+	if needs, why := a.driveIndexNeedsRefresh(); needs && !a.indexing.Load() {
+		a.setStatus("Drive/index change detected · refreshing safely in background · " + why)
+		a.startReindex(false)
+		return
+	}
 	if strings.TrimSpace(getWindowText(a.searchEdit)) != "" {
 		a.scheduleSearch()
 	}
+}
+
+func cleanupStalePartialIndexes(dir string) {
+	if dir == "" {
+		return
+	}
+	matches, _ := filepath.Glob(filepath.Join(dir, "xFile_v3.partial.*.index"))
+	for _, path := range matches {
+		_ = os.Remove(path)
+	}
+}
+
+func (a *WindowsApp) scheduleDriveRefreshCheck() {
+	if a == nil || a.hwnd == 0 {
+		return
+	}
+	seq := a.driveChangeSeq.Add(1)
+	a.postStatus("Drive change detected · checking current volume...")
+	go func() {
+		time.Sleep(1400 * time.Millisecond)
+		if a.driveChangeSeq.Load() == seq && a.hwnd != 0 {
+			postMessage(a.hwnd, wmAppDriveCheck, 0, 0)
+		}
+	}()
+}
+
+func (a *WindowsApp) handleDriveRefreshCheck() {
+	if a == nil || a.indexing.Load() {
+		return
+	}
+	if needs, why := a.driveIndexNeedsRefresh(); needs {
+		a.postStatus("Drive changed · rebuilding index in background · " + why)
+		a.startReindex(false)
+	}
+}
+
+func (a *WindowsApp) driveIndexNeedsRefresh() (bool, string) {
+	if a == nil {
+		return false, ""
+	}
+	match, known := driveStateMatches(DriveStatePath(), a.roots())
+	if !known {
+		return true, "creating volume fingerprint (one-time refresh)"
+	}
+	if !match {
+		return true, "drive letter/volume changed"
+	}
+	return false, ""
+}
+
+func (a *WindowsApp) applyIndexingVisual(active bool) {
+	if a == nil {
+		return
+	}
+	if active {
+		setWindowText(a.hwnd, appName+" "+appVersion+"  ·  INDEXING...")
+		setWindowText(a.reindexBtn, "Indexing...")
+		if a.indexProgress != 0 {
+			sendMessage(a.indexProgress, pbmSetMarquee, 1, 28)
+		}
+	} else {
+		setWindowText(a.hwnd, appName+" "+appVersion)
+		setWindowText(a.reindexBtn, "Reindex")
+		if a.indexProgress != 0 {
+			sendMessage(a.indexProgress, pbmSetMarquee, 0, 0)
+		}
+	}
+	a.layout()
 }
 
 func formatCount(n int) string {

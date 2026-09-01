@@ -118,6 +118,7 @@ const (
 	wmClose            = 0x0010
 	wmQuit             = 0x0012
 	wmActivateApp      = 0x001C
+	wmDeviceChange     = 0x0219
 	wmSetFont          = 0x0030
 	wmCommand          = 0x0111
 	wmNotify           = 0x004E
@@ -138,6 +139,8 @@ const (
 	wmAppFocusList     = wmApp + 6
 	wmAppDates         = wmApp + 7
 	wmAppShellPathGone = wmApp + 8
+	wmAppDriveCheck    = wmApp + 9
+	wmAppIndexingState = wmApp + 10
 
 	pmRemove = 0x0001
 
@@ -222,7 +225,16 @@ const (
 	stmSetImage = 0x0172
 	imageBitmap = 0
 
+	wmUser        = 0x0400
+	pbmSetMarquee = wmUser + 10
+	pbsMarquee    = 0x00000008
+
+	dbtDevNodesChanged      = 0x0007
+	dbtDeviceArrival        = 0x8000
+	dbtDeviceRemoveComplete = 0x8004
+
 	iccListViewClasses = 0x00000001
+	iccProgressClass   = 0x00000020
 )
 
 type bitmapObject struct {

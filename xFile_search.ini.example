@@ -1,5 +1,5 @@
-; xFile_search v0.1.11 example
-; Roots=auto indexes local fixed drives.
+; xFile_search v0.1.28 example
+; Roots=auto indexes accessible local fixed and removable drives.
 ; Or select drives/folders: Roots=C:\;D:\;S:\
 Roots=auto
 MaxDisplayResults=2000

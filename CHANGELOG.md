@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.28
+- Detects replacement of fixed/removable volumes even when the same Windows drive letter is reused (for example F:) by comparing a persisted Windows volume fingerprint.
+- Monitors Windows drive arrival/removal/change events and automatically starts a safe background refresh when the indexed volume set changes.
+- `Roots=auto` now includes accessible local fixed and removable drives; empty removable/card-reader slots are skipped.
+- Changed/swapped volumes are prioritized first during reindexing so useful results become available sooner.
+- Added **progressive background indexing**: after an early checkpoint (or the first root completes), a valid partial v3 index is published and becomes searchable while the full scan continues.
+- Added an obvious indexing state: `INDEXING...` in the window title, `Indexing...` on the Reindex button, a bottom marquee progress indicator, current scan path, running item count and skipped count.
+- Search result status continues to show that indexing is running in the background.
+- Captures the drive fingerprint at index-start time so a volume swapped during a long scan triggers another refresh instead of silently accepting a mixed/stale index.
+- Existing Index v3 format remains compatible; this release does not require an index-format migration.
+- Corrected Windows drive-scope search test fixtures to use real single-backslash Windows paths.
+- Includes all v0.1.27 focus/Preview navigation improvements.
+
+
 ## 0.1.27
 - Restores the result-list focus when xFile_search is activated again after switching to another application, so Up/Down immediately continues browsing from the current file.
 - A normal click on an image Preview now scrolls the matching result row into view, gives it the focused selection highlight, and makes Up/Down immediately available.

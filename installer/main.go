@@ -19,7 +19,7 @@ import (
 
 const (
 	appName    = "xFile_search"
-	appVersion = "0.1.27"
+	appVersion = "0.1.28"
 )
 
 //go:embed payload/xFile_search.exe payload/README_KO.txt payload/README.txt
