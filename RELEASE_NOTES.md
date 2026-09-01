@@ -1,13 +1,17 @@
-# xFile_search v0.1.27
+# xFile_search v0.1.28
 
-Recommended download: **xFile_search_Setup_v0.1.27_x64.exe**.
+Recommended download: **xFile_search_Setup_v0.1.28_x64.exe**.
 
 ## What changed
 
-- When you switch to another application and return to xFile_search, the currently selected result automatically regains list focus. You can press **Up/Down immediately** to continue browsing images without first clicking the list.
-- Clicking an image in the **Preview** pane now reveals the matching row in the left result list, scrolls it into view, and shows the focused selection highlight.
-- After a normal Preview click, **Up/Down** immediately moves to the previous/next result.
-- Image **drag-to-pan**, mouse-wheel cursor-centered zoom, **1:1**, **Fit Window**, and Preview double-click-to-open remain unchanged.
-- Existing Index v3 files remain compatible; **no reindex is required** when upgrading from v0.1.26.
+- **Drive swap detection:** if another USB/external/local volume is connected under the same letter such as **F:**, xFile_search compares the Windows volume fingerprint and automatically refreshes instead of continuing to trust the old F: index.
+- **Live drive monitoring:** insertion, removal and replacement events are detected while xFile_search is open.
+- **Changed drives are scanned first** when possible, so the newly connected drive becomes useful sooner.
+- **Progressive background indexing:** xFile_search publishes an early partial index (normally after about 5,000 scanned entries, or when the first root finishes sooner). That partial index is immediately searchable while the full scan continues in the background.
+- **Clear indexing feedback:** the title bar shows `INDEXING...`, the Reindex button changes to `Indexing...`, a marquee indicator appears at the bottom, and status text shows the current scan path, running item count and skipped count.
+- Search result status also says when **INDEXING continues in background**, so a long scan is not mistaken for a frozen program.
+- `Roots=auto` now includes accessible local fixed and removable drives. Empty removable/card-reader slots are skipped.
+- The existing **Index v3** format is unchanged. On the first v0.1.28 launch, one background refresh may run to establish the new volume fingerprint baseline.
+- Includes the v0.1.27 return-focus and Preview-click navigation improvements.
 
 The Setup installer preserves Index, Logs, Backup, SearchHistory.txt, and user configuration during upgrades.

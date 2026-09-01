@@ -2,18 +2,21 @@
 
 대량의 파일에서도 빠르게 파일명/경로를 찾을 수 있도록 만든 Windows용 초고속 파일 검색 프로그램입니다. Everything처럼 단순하고 빠르게 사용하는 것을 목표로 하되, Preview와 키보드 중심 작업 기능을 강화하고 있습니다.
 
-현재 버전: **0.1.27**
+현재 버전: **0.1.28**
 
 
 ## 설치 (권장)
 
-일반 Windows 사용자는 GitHub **Releases**에서 **`xFile_search_Setup_v0.1.27_x64.exe`** 하나만 다운로드해 실행하면 됩니다. 관리자 권한 없이 사용자 계정에 설치되며, 업데이트할 때 기존 Index와 검색 기록을 보존합니다.
+일반 Windows 사용자는 GitHub **Releases**에서 **`xFile_search_Setup_v0.1.28_x64.exe`** 하나만 다운로드해 실행하면 됩니다. 관리자 권한 없이 사용자 계정에 설치되며, 업데이트할 때 기존 Index와 검색 기록을 보존합니다.
 
-무설치 사용자는 **`xFile_search_Portable_v0.1.27_x64.zip`**을 받아 압축 해제 후 `xFile_search.exe`를 실행하면 됩니다. 자세한 내용은 [INSTALL_KO.md](INSTALL_KO.md)를 참고하세요.
+무설치 사용자는 **`xFile_search_Portable_v0.1.28_x64.zip`**을 받아 압축 해제 후 `xFile_search.exe`를 실행하면 됩니다. 자세한 내용은 [INSTALL_KO.md](INSTALL_KO.md)를 참고하세요.
 
 ## 주요 기능
 
 - 대량 파일 인덱스 기반의 빠른 파일 검색
+- 고정/이동식 로컬 드라이브를 자동 감지하고, 같은 드라이브 문자(예: `F:`)에 다른 USB/외장 드라이브가 연결되면 Windows 볼륨 식별값을 비교해 자동 재인덱싱
+- **Progressive background indexing**: 초기 일부 인덱스를 먼저 검색 가능하게 만든 뒤 전체 인덱싱을 백그라운드로 계속 진행
+- 인덱싱 중 창 제목의 `INDEXING...`, `Indexing...` 버튼, 하단 Marquee 진행 표시, 현재 스캔 위치, 누적 파일 수, skipped 수를 표시
 - `*.jpg`, `D:\\*.jpg`, 특정 폴더 범위 검색 지원
 - **Search Within**으로 현재 검색 결과 안에서 추가 검색
 - 검색 결과는 먼저 빠르게 표시하고 Size/Date 등 메타데이터는 background에서 보충

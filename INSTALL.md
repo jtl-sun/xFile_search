@@ -2,7 +2,7 @@
 
 ## Recommended: Windows Setup
 
-1. Download `xFile_search_Setup_v0.1.27_x64.exe` from GitHub **Releases**.
+1. Download `xFile_search_Setup_v0.1.28_x64.exe` from GitHub **Releases**.
 2. Double-click the setup file.
 3. Click **Yes** in the install confirmation.
 4. xFile_search launches automatically when installation finishes.
@@ -15,8 +15,15 @@ No administrator privileges are required. Installing over an older version updat
 
 ## Portable
 
-Extract `xFile_search_Portable_v0.1.27_x64.zip` and run `xFile_search.exe`.
+Extract `xFile_search_Portable_v0.1.28_x64.zip` and run `xFile_search.exe`.
 
 ## Uninstall
 
 Use **Settings > Apps > Installed apps > xFile_search > Uninstall**.
+
+
+## First v0.1.28 launch
+
+When upgrading from v0.1.27 or earlier, xFile_search may perform **one automatic background reindex** to establish volume fingerprints for fixed/removable drives.
+
+The app stays usable while indexing. Once the first partial checkpoint is ready, searches use that partial index while the full index continues in the background. Indexing activity is visible in the title bar, the Reindex button, the bottom marquee indicator, and the status text.

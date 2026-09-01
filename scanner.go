@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"io"
 	"os"
@@ -92,6 +93,18 @@ func BuildIndex(ctx context.Context, roots []string, progress func(ScanProgress)
 // The UI later memory-maps this file; it never rebuilds millions of Entry
 // objects in RAM at startup.
 func BuildIndexFile(ctx context.Context, roots []string, path string, progress func(ScanProgress)) (int, error) {
+	return buildIndexFile(ctx, roots, path, "", 0, progress)
+}
+
+// BuildIndexFileProgressive writes the normal final index and, once enough
+// entries are available, also publishes one valid read-only partial index.
+// The UI can memory-map that partial checkpoint immediately while the worker
+// keeps scanning the remaining directories in the background.
+func BuildIndexFileProgressive(ctx context.Context, roots []string, path, partialPath string, partialAfter int, progress func(ScanProgress)) (int, error) {
+	return buildIndexFile(ctx, roots, path, partialPath, partialAfter, progress)
+}
+
+func buildIndexFile(ctx context.Context, roots []string, path, partialPath string, partialAfter int, progress func(ScanProgress)) (int, error) {
 	if len(roots) == 0 {
 		return 0, errors.New("no index roots")
 	}
@@ -132,6 +145,29 @@ func BuildIndexFile(ctx context.Context, roots []string, path string, progress f
 	errs := 0
 	count := 0
 	lastReport := time.Now()
+	partialPublished := false
+
+	publishPartial := func() {
+		if partialPublished || partialPath == "" || count <= 0 {
+			return
+		}
+		if err := w.Flush(); err != nil {
+			return
+		}
+		if err := ow.Flush(); err != nil {
+			return
+		}
+		if err := f.Sync(); err != nil {
+			return
+		}
+		if err := offFile.Sync(); err != nil {
+			return
+		}
+		if err := writeIndexCheckpoint(tmp, offsetsTmp, partialPath, pos, uint64(count)); err == nil {
+			partialPublished = true
+		}
+	}
+
 	for _, root := range roots {
 		root = filepath.Clean(root)
 		if _, err := os.Stat(root); err != nil {
@@ -174,6 +210,13 @@ func BuildIndexFile(ctx context.Context, roots []string, path string, progress f
 					}
 					throttleIndexer(count)
 				}
+				if !partialPublished && partialAfter > 0 && count >= partialAfter {
+					publishPartial()
+				}
+				if progress != nil && (count&0x1fff == 0 || time.Since(lastReport) > 750*time.Millisecond) {
+					progress(ScanProgress{Root: root, Current: dir, Count: count, Errors: errs})
+					lastReport = time.Now()
+				}
 				if readErr != nil {
 					if !errors.Is(readErr, io.EOF) {
 						errs++
@@ -186,6 +229,12 @@ func BuildIndexFile(ctx context.Context, roots []string, path string, progress f
 				progress(ScanProgress{Root: root, Current: dir, Count: count, Errors: errs})
 				lastReport = time.Now()
 			}
+		}
+		// If the first root completed before reaching the normal checkpoint
+		// threshold, publish it now. This is especially useful for a swapped
+		// external drive that contains fewer than partialAfter entries.
+		if !partialPublished && partialPath != "" && count > 0 {
+			publishPartial()
 		}
 	}
 
@@ -202,6 +251,70 @@ func BuildIndexFile(ctx context.Context, roots []string, path string, progress f
 		progress(ScanProgress{Count: count, Errors: errs})
 	}
 	return count, nil
+}
+
+func writeIndexCheckpoint(recordsPath, offsetsPath, outPath string, offsetTableAt, count uint64) error {
+	if outPath == "" || count == 0 {
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
+		return err
+	}
+	tmp := outPath + ".tmp"
+	_ = os.Remove(tmp)
+
+	out, err := os.Create(tmp)
+	if err != nil {
+		return err
+	}
+	ok := false
+	defer func() {
+		_ = out.Close()
+		if !ok {
+			_ = os.Remove(tmp)
+		}
+	}()
+
+	records, err := os.Open(recordsPath)
+	if err != nil {
+		return err
+	}
+	if _, err := io.CopyBuffer(out, records, make([]byte, 1<<20)); err != nil {
+		_ = records.Close()
+		return err
+	}
+	_ = records.Close()
+
+	offsets, err := os.Open(offsetsPath)
+	if err != nil {
+		return err
+	}
+	if _, err := io.CopyBuffer(out, offsets, make([]byte, 1<<20)); err != nil {
+		_ = offsets.Close()
+		return err
+	}
+	_ = offsets.Close()
+
+	var buf [8]byte
+	binary.LittleEndian.PutUint64(buf[:], count)
+	if _, err := out.WriteAt(buf[:], indexHeaderCountOffset); err != nil {
+		return err
+	}
+	binary.LittleEndian.PutUint64(buf[:], offsetTableAt)
+	if _, err := out.WriteAt(buf[:], indexHeaderOffsetsOffset); err != nil {
+		return err
+	}
+	if err := out.Sync(); err != nil {
+		return err
+	}
+	if err := out.Close(); err != nil {
+		return err
+	}
+	if err := replaceFile(tmp, outPath); err != nil {
+		return err
+	}
+	ok = true
+	return nil
 }
 
 func throttleIndexer(count int) {

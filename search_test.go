@@ -13,16 +13,16 @@ func testSnapshot() *IndexSnapshot {
 		p string
 		d bool
 	}{
-		{`C:\\Design\\2019\\turquoise_necklace.jpg`, false},
-		{`C:\\Design\\2020\\turquoise_ring.png`, false},
-		{`C:\\Design\\2020\\ring_front.jpg`, false},
-		{`C:\\Costing\\Dillards\\costing.xlsx`, false},
-		{`C:\\Design\\2019`, true},
-		{`S:\\Archive\\old_necklace.jpg`, false},
-		{`S:\\Archive\\notes.txt`, false},
-		{`D:\\Video\\sample.mpg`, false},
+		{`C:\Design\2019\turquoise_necklace.jpg`, false},
+		{`C:\Design\2020\turquoise_ring.png`, false},
+		{`C:\Design\2020\ring_front.jpg`, false},
+		{`C:\Costing\Dillards\costing.xlsx`, false},
+		{`C:\Design\2019`, true},
+		{`S:\Archive\old_necklace.jpg`, false},
+		{`S:\Archive\notes.txt`, false},
+		{`D:\Video\sample.mpg`, false},
 	}
-	s := &IndexSnapshot{BuiltAt: time.Now(), Roots: []string{`C:\\`, `S:\\`, `D:\\`}}
+	s := &IndexSnapshot{BuiltAt: time.Now(), Roots: []string{`C:\`, `S:\`, `D:\`}}
 	for _, x := range paths {
 		s.Entries = append(s.Entries, NewEntry(x.p, x.d))
 	}
@@ -46,11 +46,11 @@ func TestDriveScopedExtensionGlob(t *testing.T) {
 		query string
 		want  int
 	}{
-		{`C:\\*.jpg`, 2},
-		{`S:\\*.jpg`, 1},
-		{`D:\\*.mpg`, 1},
-		{`C:\\Design\\2019\\*.jpg`, 1},
-		{`C:\\Design\\*.png`, 1},
+		{`C:\*.jpg`, 2},
+		{`S:\*.jpg`, 1},
+		{`D:\*.mpg`, 1},
+		{`C:\Design\2019\*.jpg`, 1},
+		{`C:\Design\*.png`, 1},
 	}
 	for _, tc := range cases {
 		r := Search(context.Background(), s, nil, tc.query, FilterAll)
@@ -62,7 +62,7 @@ func TestDriveScopedExtensionGlob(t *testing.T) {
 
 func TestDriveScopedPlainTerm(t *testing.T) {
 	s := testSnapshot()
-	r := Search(context.Background(), s, nil, `S:\\jpg`, FilterAll)
+	r := Search(context.Background(), s, nil, `S:\jpg`, FilterAll)
 	if len(r.IDs) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(r.IDs))
 	}
@@ -73,7 +73,7 @@ func TestDriveScopedPlainTerm(t *testing.T) {
 
 func TestDriveScopedFilenameGlob(t *testing.T) {
 	s := testSnapshot()
-	r := Search(context.Background(), s, nil, `C:\\ring*.jpg`, FilterAll)
+	r := Search(context.Background(), s, nil, `C:\ring*.jpg`, FilterAll)
 	if len(r.IDs) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(r.IDs))
 	}
@@ -83,8 +83,8 @@ func TestDriveScopedFilenameGlob(t *testing.T) {
 }
 
 func TestQuotedPathGlob(t *testing.T) {
-	q := ParseQuery(`"C:\\Old Designs\\*.jpg"`)
-	if len(q.PathPrefixes) != 1 || q.PathPrefixes[0] != `c:\\old designs\\` {
+	q := ParseQuery(`"C:\Old Designs\*.jpg"`)
+	if len(q.PathPrefixes) != 1 || q.PathPrefixes[0] != `c:\old designs\` {
 		t.Fatalf("unexpected path prefixes: %#v", q.PathPrefixes)
 	}
 	if _, ok := q.Extensions["jpg"]; !ok {
@@ -115,7 +115,7 @@ func TestMappedDriveScopedExtensionGlob(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer loaded.Close()
-	r := Search(context.Background(), loaded, nil, `S:\\*.jpg`, FilterAll)
+	r := Search(context.Background(), loaded, nil, `S:\*.jpg`, FilterAll)
 	if len(r.IDs) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(r.IDs))
 	}
