@@ -18,7 +18,12 @@ type Query struct {
 
 func ParseQuery(raw string) Query {
 	q := Query{Extensions: make(map[string]struct{})}
-	for _, field := range splitQueryFields(strings.TrimSpace(raw)) {
+	trimmedRaw := strings.TrimSpace(raw)
+	if prefix, ok := wholeDirectoryPrefix(trimmedRaw); ok {
+		q.PathPrefixes = append(q.PathPrefixes, prefix)
+		return q
+	}
+	for _, field := range splitQueryFields(trimmedRaw) {
 		f := strings.ToLower(strings.TrimSpace(strings.Trim(field, `"`)))
 		if f == "" {
 			continue
@@ -49,6 +54,28 @@ func ParseQuery(raw string) Query {
 		}
 	}
 	return q
+}
+
+// wholeDirectoryPrefix recognizes a complete Windows directory path entered
+// directly into the search box. A trailing slash is an unambiguous signal that
+// the user wants that directory as the search scope. Treating the whole input
+// as one token is important when the directory contains spaces, because normal
+// query tokenization would otherwise split the path into multiple search terms.
+// The resulting PathPrefix is recursive, so every descendant directory/file is
+// included automatically.
+func wholeDirectoryPrefix(raw string) (string, bool) {
+	if raw == "" {
+		return "", false
+	}
+	unquoted := strings.TrimSpace(strings.Trim(raw, `"`))
+	normalized := normalizePathToken(unquoted)
+	if !isWindowsPathToken(normalized) || !strings.HasSuffix(normalized, `\`) {
+		return "", false
+	}
+	if strings.ContainsAny(normalized, "*?") {
+		return "", false
+	}
+	return strings.ToLower(normalized), true
 }
 
 // splitQueryFields is strings.Fields with basic quote support so paths such as
