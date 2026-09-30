@@ -92,6 +92,39 @@ func TestQuotedPathGlob(t *testing.T) {
 	}
 }
 
+func TestDirectDirectoryPathWithSpacesIsRecursive(t *testing.T) {
+	s := &IndexSnapshot{BuiltAt: time.Now(), Roots: []string{`D:\`}}
+	for _, x := range []struct {
+		p string
+		d bool
+	}{
+		{`D:\pg\wk\PO\702-LIW\_Request Samples\Old data`, true},
+		{`D:\pg\wk\PO\702-LIW\_Request Samples\Old data\Req_20180904.pdf`, false},
+		{`D:\pg\wk\PO\702-LIW\_Request Samples\2026\September\new_sample.jpg`, false},
+		{`D:\pg\wk\PO\702-LIW\_Request Samples Backup\outside.txt`, false},
+	} {
+		s.Entries = append(s.Entries, NewEntry(x.p, x.d))
+	}
+
+	q := ParseQuery(`D:\pg\wk\PO\702-LIW\_Request Samples\`)
+	if len(q.PathPrefixes) != 1 || q.PathPrefixes[0] != `d:\pg\wk\po\702-liw\_request samples\` {
+		t.Fatalf("unexpected directory scope: %#v", q.PathPrefixes)
+	}
+	if len(q.Terms) != 0 {
+		t.Fatalf("directory path with spaces must not be split into terms: %#v", q.Terms)
+	}
+
+	r := Search(context.Background(), s, nil, `D:\pg\wk\PO\702-LIW\_Request Samples\`, FilterAll)
+	if len(r.IDs) != 3 {
+		t.Fatalf("expected directory + recursive descendants only (3), got %d", len(r.IDs))
+	}
+	for _, id := range r.IDs {
+		if got := s.Entries[id].Path; got == `D:\pg\wk\PO\702-LIW\_Request Samples Backup\outside.txt` {
+			t.Fatalf("sibling path leaked into directory scope: %s", got)
+		}
+	}
+}
+
 func TestSearchWithin(t *testing.T) {
 	s := testSnapshot()
 	r1 := Search(context.Background(), s, nil, "turquoise", FilterAll)

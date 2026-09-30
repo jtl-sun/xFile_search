@@ -9,7 +9,7 @@ import (
 
 const (
 	appName        = "xFile_search"
-	appVersion     = "0.1.29"
+	appVersion     = "0.1.30"
 	indexMagic     = "XFSIDX03"
 	indexVersion   = uint32(3)
 	maxPathBytes   = 1 << 20
@@ -27,7 +27,7 @@ type Entry struct {
 
 func NewEntry(path string, isDir bool) Entry {
 	clean := filepath.Clean(path)
-	nameStart := strings.LastIndexAny(clean, `\\/`)
+	nameStart := strings.LastIndexAny(clean, `\/`)
 	if nameStart < 0 {
 		nameStart = 0
 	} else {
