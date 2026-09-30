@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.30
+- Directly entering a Windows directory path ending in `\` now treats the entire path as one recursive search scope, including all sub-directories and files.
+- Directory paths containing spaces no longer get split into separate search terms when used as a direct folder scope (for example `D:\pg\wk\PO\702-LIW\_Request Samples\`).
+- Recursive directory scope uses the existing memory-mapped index and does not perform a new disk scan on the UI thread.
+- Added regression coverage to confirm descendants are included while similarly named sibling folders are excluded.
+- Keeps the v0.1.29 bold green `INDEXING... xx%` indicator and Index v3 compatibility.
+
 ## 0.1.29
 - Added a dedicated **bold green `INDEXING... xx%` status label** at the bottom of the main window so background indexing is visually unmistakable.
 - The current indexing percentage is also mirrored in the window title.
