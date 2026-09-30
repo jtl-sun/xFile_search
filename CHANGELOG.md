@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.31
+- Added a global **Ctrl+Alt+F** hotkey that brings xFile_search to the foreground, focuses the search box, and selects the current query for immediate replacement.
+- Added a Windows **system tray** icon with Show, Hide to Tray, Clear Search / Scope, Reindex, Open Index Folder, Start with Windows, and Exit commands.
+- Added a per-user **Start with Windows** toggle using the current-user Run registry key; no administrator permission is required.
+- Direct directory searches now show an explicit scope line such as `Scope: D:\Design\ | Subfolders: ON`, making recursive search behavior visible to the user.
+- The scope line is cleared automatically when the search is no longer a direct directory scope and does not interfere with Search Within breadcrumbs.
+- Productivity UI runs on a separate locked Win32 message-loop thread and is not started inside `xFile_indexer.exe`, preserving the existing background-indexing architecture.
+- Added regression tests for directory-scope display formatting and tray tooltip UTF-16 truncation safety.
+- Kept the memory-mapped Index v3 format unchanged; no index migration is required.
+- Existing v0.1.30 recursive directory search and v0.1.29 bold green `INDEXING... xx%` behavior remain unchanged.
+
 ## 0.1.30
 - Directly entering a Windows directory path ending in `\` now treats the entire path as one recursive search scope, including all sub-directories and files.
 - Directory paths containing spaces no longer get split into separate search terms when used as a direct folder scope (for example `D:\pg\wk\PO\702-LIW\_Request Samples\`).

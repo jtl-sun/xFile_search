@@ -9,7 +9,7 @@ import (
 
 const (
 	appName        = "xFile_search"
-	appVersion     = "0.1.30"
+	appVersion     = "0.1.31"
 	indexMagic     = "XFSIDX03"
 	indexVersion   = uint32(3)
 	maxPathBytes   = 1 << 20

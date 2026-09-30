@@ -19,6 +19,10 @@ func main() {
 	}
 	defer release()
 
+	// Tray/hotkey/startup UX runs on its own Win32 message-loop thread and is
+	// kept out of the indexer child process above.
+	go startProductivityFeatures()
+
 	app := NewWindowsApp()
 	if err := app.Run(); err != nil {
 		logf("fatal: %v", err)

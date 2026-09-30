@@ -2,13 +2,18 @@
 
 A fast, lightweight Windows file-name search application focused on large file collections, responsive indexing, keyboard-first navigation, and rich previews.
 
-Current version: **0.1.29**
+Current version: **0.1.31**
 
 > Korean documentation: [README_KO.md](README_KO.md)
 
 ## Highlights
 
 - Fast indexed file-name/path search for large local file collections
+- Direct folder paths ending in `\` search that folder recursively, including all subfolders
+- Explicit directory scope display: `Scope: ... | Subfolders: ON`
+- Global **Ctrl+Alt+F** hotkey to bring xFile_search forward and focus/select the search box
+- Windows system tray menu with Show, Hide to Tray, Clear Search / Scope, Reindex, Open Index Folder, Start with Windows, and Exit
+- Per-user **Start with Windows** toggle without administrator rights
 - Automatically detects accessible fixed/removable local drives and recognizes when a different volume is connected under the same drive letter (for example `F:`)
 - Progressive background indexing: an early partial index becomes searchable while the full index continues building
 - Visible indexing state with a **bold green `INDEXING... xx%` label**, window title percentage, Reindex button state, bottom marquee indicator, current scan path, running item count, and skipped count
@@ -23,12 +28,11 @@ Current version: **0.1.29**
 - Explorer-style Windows Shell context menu on right-click
 - Portable index layout with visible `Index` folder
 
-
 ## Install (recommended)
 
-For most Windows users, download **`xFile_search_Setup_v0.1.29_x64.exe`** from GitHub Releases and run it. It installs per-user without administrator privileges and preserves Index/search history during upgrades.
+For most Windows users, download **`xFile_search_Setup_v0.1.31_x64.exe`** from GitHub Releases and run it. It installs per-user without administrator privileges and preserves Index/search history during upgrades.
 
-Portable users can download **`xFile_search_Portable_v0.1.29_x64.zip`**. See [INSTALL.md](INSTALL.md) for details.
+Portable users can download **`xFile_search_Portable_v0.1.31_x64.zip`**. See [INSTALL.md](INSTALL.md) for details.
 
 ## Requirements
 
@@ -56,8 +60,6 @@ copy /Y xFile_search.exe xFile_indexer.exe
 
 ## Portable layout
 
-At runtime xFile_search can keep its searchable index beside the executable:
-
 ```text
 xFile_search/
 ├─ xFile_search.exe
@@ -73,11 +75,11 @@ Runtime data and generated indexes are intentionally excluded from Git by `.giti
 
 ## Security notes
 
-xFile_search does not require PowerShell, `ExecutionPolicy Bypass`, hidden browser launching, or network access for its core search/preview workflow. See [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md).
+xFile_search does not require PowerShell, `ExecutionPolicy Bypass`, hidden browser launching, or network access for its core search/preview workflow. Start with Windows uses the current-user Windows Run registry key only. See [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md).
 
 ## Tests
 
-The project includes unit tests for search, navigation, selection, sorting, preview geometry, metadata formatting, search history, and window/layout behavior. See [docs/TEST_REPORT.md](docs/TEST_REPORT.md).
+The project includes unit tests for search, navigation, selection, sorting, preview geometry, metadata formatting, search history, directory-scope UI formatting, and window/layout behavior. See [docs/TEST_REPORT.md](docs/TEST_REPORT.md).
 
 ## Changelog
 
