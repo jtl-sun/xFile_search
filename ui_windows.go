@@ -1164,13 +1164,13 @@ func (a *WindowsApp) consumeResult() {
 	}
 	a.lastResult = p.Result
 	a.lastSnap = p.Snap
-	a.showIDs(p.Result.IDs, p.Snap, "")
-	shown := len(p.Result.IDs)
-	if shown > a.cfg.MaxDisplayResults {
-		shown = a.cfg.MaxDisplayResults
-	}
+	mix := a.showIDs(p.Result.IDs, p.Snap, "")
+	shown := len(a.shownIDs)
 	status := fmt.Sprintf("%s matches · %s shown · %.1f ms · %s indexed",
 		formatCount(len(p.Result.IDs)), formatCount(shown), float64(p.Result.Elapsed.Microseconds())/1000.0, formatCount(p.Snap.Len()))
+	if mix.Balanced {
+		status += fmt.Sprintf(" · recursive view: %s files + %s folders", formatCount(mix.Files), formatCount(mix.Folders))
+	}
 	if a.indexing.Load() {
 		status += " · INDEXING continues in background"
 	}
@@ -1187,9 +1187,9 @@ func (a *WindowsApp) consumeResult() {
 	}
 }
 
-func (a *WindowsApp) showIDs(ids []uint32, snap *IndexSnapshot, statusOverride string) {
+func (a *WindowsApp) showIDs(ids []uint32, snap *IndexSnapshot, statusOverride string) displayMix {
 	if snap == nil {
-		return
+		return displayMix{}
 	}
 	if a.previewMgr != nil {
 		a.previewMgr.Clear()
@@ -1200,6 +1200,7 @@ func (a *WindowsApp) showIDs(ids []uint32, snap *IndexSnapshot, statusOverride s
 	if limit > a.cfg.MaxDisplayResults {
 		limit = a.cfg.MaxDisplayResults
 	}
+	displayIDs, mix := selectDisplayIDs(snap, ids, limit, getWindowText(a.searchEdit), a.currentFilter())
 	a.shownIDs = a.shownIDs[:0]
 	a.dateTextByID = make(map[uint32]string, limit)
 	a.sizeTextByID = make(map[uint32]string, limit)
@@ -1208,8 +1209,8 @@ func (a *WindowsApp) showIDs(ids []uint32, snap *IndexSnapshot, statusOverride s
 	sendMessage(a.list, wmSetRedraw, 0, 0)
 	sendMessage(a.list, lvmDeleteAllItems, 0, 0)
 	row := 0
-	for i := 0; i < len(ids) && row < limit; i++ {
-		id := ids[i]
+	for i := 0; i < len(displayIDs) && row < limit; i++ {
+		id := displayIDs[i]
 		e, ok := snap.EntryAt(id)
 		if !ok || a.isSessionDeleted(e.Path) {
 			continue
@@ -1228,6 +1229,7 @@ func (a *WindowsApp) showIDs(ids []uint32, snap *IndexSnapshot, statusOverride s
 	if statusOverride != "" {
 		a.setStatus(statusOverride)
 	}
+	return mix
 }
 
 func (a *WindowsApp) insertRow(row int, name, path, size, date string) {
