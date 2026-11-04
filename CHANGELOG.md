@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.32
+- Fixed recursive directory browsing when a directory scope contains more matches than `MaxDisplayResults`.
+- A direct directory scope in **All** mode now uses a balanced visible sample (approximately 75% files / 25% folders) instead of allowing early directory entries to fill the entire ListView.
+- **Files** mode continues to search the same directory recursively and now reliably surfaces descendant files even when thousands of folders are indexed before them.
+- Status text reports the visible recursive mix, for example `recursive view: 1,500 files + 500 folders`.
+- The full match set is still retained for search logic; only the visible ListView selection is balanced, so search speed and Index v3 remain unchanged.
+- Added regression tests for the reported “many folders first, files later” case.
+- Keeps v0.1.31 global hotkey/system tray/startup features and v0.1.29 green bold indexing progress.
+
+
 ## 0.1.31
 - Added a global **Ctrl+Alt+F** hotkey that brings xFile_search to the foreground, focuses the search box, and selects the current query for immediate replacement.
 - Added a Windows **system tray** icon with Show, Hide to Tray, Clear Search / Scope, Reindex, Open Index Folder, Start with Windows, and Exit commands.
