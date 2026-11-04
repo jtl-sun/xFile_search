@@ -1,15 +1,15 @@
-# xFile_search v0.1.31
+# xFile_search v0.1.32
 
-Recommended download: **xFile_search_Setup_v0.1.31_x64.exe**.
+Recommended download: **xFile_search_Setup_v0.1.32_x64.exe**.
 
 ## What changed
 
-- Added a global **Ctrl+Alt+F** shortcut to bring xFile_search forward, focus the search box, and select the current query.
-- Added a Windows **system tray** menu with Show, Hide to Tray, Clear Search / Scope, Reindex, Open Index Folder, Start with Windows, and Exit.
-- Added **Start with Windows** as a per-user toggle; no administrator rights are required.
-- Direct directory searches now show an explicit scope line such as `Scope: D:\Design\ | Subfolders: ON` so recursive search is visually clear.
-- The productivity features run separately from the search/indexing core, and the indexer child process does not start tray/hotkey features.
-- Existing v0.1.30 recursive directory search, v0.1.29 bold green **`INDEXING... xx%`**, removable-drive detection, and progressive background indexing remain intact.
-- Index format remains **v3**, so no index migration is required.
+- Fixed the case where a recursive directory search found tens of thousands of matches but the first `MaxDisplayResults` entries were mostly folders, making descendant files appear to be missing.
+- Direct directory scope searches in **All** mode now keep files visible by balancing the displayed rows (approximately 75% files and 25% folders when both are available).
+- Selecting **Files** continues to search every sub-directory recursively and displays file results only.
+- The status bar reports the recursive visible mix so it is clear that both file and folder results are present.
+- The underlying search still scans the full indexed match set; the change only affects which rows are placed in the capped ListView.
+- Index v3 is unchanged. No index migration is required.
+- Existing v0.1.31 global hotkey/system tray/startup features, v0.1.30 recursive directory scope, and v0.1.29 bold green **`INDEXING... xx%`** remain intact.
 
 The Setup installer preserves Index, Logs, Backup, SearchHistory.txt, and user configuration during upgrades.
